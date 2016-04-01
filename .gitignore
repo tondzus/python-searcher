@@ -1,0 +1,9 @@
+.cache
+__pycache__
+bin/searcher
+
+*.swp
+*.pyc
+*.db
+*.csv
+*.db-bcp
