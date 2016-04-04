@@ -21,6 +21,8 @@ def init(args):
 def init_document_store(document_store_connector, force):
     if os.path.isfile(document_store_connector):
         if force:
+            template = 'WARNING: Document store {} already exist, removing'
+            print(template.format(document_store_connector))
             os.remove(document_store_connector)
         else:
             template = 'WARNING: Document store {} already exist, won\'t overwrite'
@@ -30,13 +32,15 @@ def init_document_store(document_store_connector, force):
     conn = sqlite3.connect(document_store_connector)
     conn.execute('CREATE TABLE documents('
                  'id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, '
-                 'content TEXT);')
+                 'path CHAR(100) NOT NULL);')
     conn.close()
 
 
 def init_index_store(index_store_connector, force):
     if os.path.isfile(index_store_connector):
         if force:
+            template = 'WARNING: Index store {} already exist, removing'
+            print(template.format(index_store_connector))
             os.remove(index_store_connector)
         else:
             template = 'WARNING: Index store {} already exist, won\'t overwrite'
@@ -67,8 +71,25 @@ def index_documents(args):
         msg = 'Indexed {} documents from {}'.format(count,
                                                     document_store_connector)
         print(msg, end='\r')
-    template = 'Successfully indexed all documents from {}'
-    print(template.format(document_store_connector))
+    template = 'Done indexing {} documents from {}'
+    print(template.format(count, document_store_connector))
+
+
+def register_document(args):
+    document_store = SQLiteDocumentStore(args.document_store)
+    documents_to_store, counter = [], 0
+    for path, _, files in os.walk(args.root):
+        for file_name in files:
+            relative_path = os.path.join(path, file_name)
+            absolute_path = os.path.abspath(relative_path)
+            documents_to_store.append((absolute_path, ))
+            counter += 1
+            print('Registered {} documents'.format(counter), end='\r')
+
+            if len(documents_to_store) == 3000:
+                document_store.store_documents(documents_to_store)
+    document_store.store_documents(documents_to_store)
+    print('Done registering {} documents from {}'.format(counter, args.root))
 
 
 def query(args):
@@ -119,6 +140,11 @@ def main():
     subparsers = parser.add_subparsers()
     subparsers.required = True
     subparsers.dest = 'action'
+
+    document_parser = subparsers.add_parser('register', help='Import documents '
+                                            'to document store')
+    document_parser.add_argument('root', help='Path to document root folder')
+    document_parser.set_defaults(func=register_document)
 
     index_parser = subparsers.add_parser('index', help='Index documents in '
                                          'document store')

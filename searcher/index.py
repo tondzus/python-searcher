@@ -65,5 +65,4 @@ class SQLiteIndexStore:
             q = 'SELECT document_id, rank FROM indexes WHERE word=? ' \
                 'ORDER BY rank DESC'
         cur = self.conn.cursor()
-        cur.execute(q, (word, ))
-        yield from cur.fetchall()
+        yield from cur.execute(q, (word, ))
