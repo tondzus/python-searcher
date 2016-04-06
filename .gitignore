@@ -1,6 +1,8 @@
 .cache
 __pycache__
 bin/searcher
+tests/plots.list
+tests/to_register
 
 *.swp
 *.pyc
