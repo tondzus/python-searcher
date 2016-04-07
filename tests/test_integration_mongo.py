@@ -6,12 +6,6 @@ from operator import itemgetter
 from searcher.mongo import MongoController
 
 
-class Args:
-    def __init__(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-
 @pytest.fixture(scope='module')
 def config(request):
     cnf = configparser.ConfigParser()
@@ -56,29 +50,29 @@ def controller(config):
 
 @pytest.fixture(scope='function')
 def controller_init(controller):
-    controller.init(Args(force=True))
+    controller.init(force=True)
     return controller
 
 
 @pytest.fixture(scope='function')
 def controller_docs(controller_init, document_root):
-    controller_init.register(Args(root=document_root))
+    controller_init.register(root=document_root)
     return controller_init
 
 
 @pytest.fixture(scope='function')
 def controller_idx(config, controller_docs):
-    controller_docs.index(Args())
+    controller_docs.index()
     return controller_docs
 
 
 def test_database_init(config, controller):
-    controller.init(Args(force=False))
+    controller.init(force=False)
 
 
 def test_database_init_db_exist(config, controller, db):
     db.documents.insert({'id': 1, 'content': 'some text'})
-    controller.init(Args(force=False))
+    controller.init(force=False)
     documents = list(db.documents.find())
     assert len(documents) == 1
     assert documents[0]['id'] == 1
@@ -89,24 +83,24 @@ def test_database_force_init(config, controller, db):
     document_count = db.documents.find().count()
     assert document_count == 1
 
-    controller.init(Args(force=True))
+    controller.init(force=True)
     document_count = db.documents.find().count()
     assert document_count == 0
 
 
 def test_document_register(controller_init, document_root, db):
-    controller_init.register(Args(root=document_root))
+    controller_init.register(root=document_root)
     assert db.documents.find().count() == len(os.listdir(document_root))
 
 
 def test_document_index(controller_docs, db):
-    controller_docs.index(Args())
+    controller_docs.index()
     index_count = db.indexes.find().count()
     assert index_count > 0
 
 
 def test_document_index_no_duplicates(controller_docs, db):
-    controller_docs.index(Args())
+    controller_docs.index()
     indexes = list(map(itemgetter('word'), db.indexes.find()))
     indexes_set = set(indexes)
     assert len(indexes) == len(indexes_set)
@@ -114,22 +108,21 @@ def test_document_index_no_duplicates(controller_docs, db):
 
 def test_document_show_content(controller_docs, db, capsys):
     document = db.documents.find_one()
-    controller_docs.show(Args(document_id=[document['_id']], preview=False))
+    controller_docs.show(document_ids=[document['_id']], preview=False)
     content, _ = capsys.readouterr()
     assert content[:-1] == document['content']
 
 
 def test_document_show_preview(controller_docs, db, capsys):
     document = db.documents.find_one()
-    controller_docs.show(Args(document_id=[document['_id']], preview=True))
+    controller_docs.show(document_ids=[document['_id']], preview=True)
     content, _ = capsys.readouterr()
     assert content[:-1] in document['content']
 
 
 def test_query(controller_idx, db, capsys):
     index = db.indexes.find_one()
-    args = Args(measure=False, query_string=index['word'], preview=False)
-    controller_idx.query(args)
+    controller_idx.query(index['word'], measure=False, preview=False)
     doc_ids_string, _ = capsys.readouterr()
     doc_ids = doc_ids_string.strip().split()
     assert len(doc_ids) > 0

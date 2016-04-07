@@ -6,12 +6,6 @@ import configparser
 from searcher.sqlite import SQLiteController
 
 
-class Args:
-    def __init__(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-
 def csv_import(csv_path, dbpath):
     q = 'INSERT INTO indexes (document_id, word, rank) VALUES (?, ?, ?)'
     db = sqlite3.connect(dbpath)
@@ -60,20 +54,20 @@ def controller(config):
 
 @pytest.fixture(scope='function')
 def controller_init(controller):
-    controller.init(Args(force=True))
+    controller.init(force=True)
     return controller
 
 
 @pytest.fixture(scope='function')
 def controller_docs(controller_init, document_root):
-    controller_init.register(Args(root=document_root))
+    controller_init.register(root=document_root)
     return controller_init
 
 
 @pytest.fixture(scope='function')
 def controller_idx(config, controller_docs, tmp_csv_buffer):
     controller_docs.index_store.csv_buffer = tmp_csv_buffer
-    controller_docs.index(Args())
+    controller_docs.index()
     csv_import(tmp_csv_buffer, config.get('sqlite3', 'indexes'))
     return controller_docs
 
@@ -90,39 +84,34 @@ def tmp_csv_buffer(request):
 
 
 def test_database_init(config, controller):
-    args = Args(force=False)
-    controller.init(args)
+    controller.init(force=False)
     assert os.path.isfile(config.get('sqlite3', 'documents'))
 
 
 def test_database_init_db_exist(config, controller):
-    args = Args(force=False)
-
     docdb = config.get('sqlite3', 'documents')
     with open(docdb, 'w') as fp:
         fp.write('rubish')
     created = os.stat(docdb).st_mtime
 
-    controller.init(args)
+    controller.init(force=False)
     modified = os.stat(docdb).st_mtime
     assert created == modified
 
 
 def test_database_force_init(config, controller):
-    args = Args(force=True)
-
     docdb = config.get('sqlite3', 'documents')
     with open(docdb, 'w') as fp:
         fp.write('rubish')
     created = os.stat(docdb).st_mtime
 
-    controller.init(args)
+    controller.init(force=True)
     modified = os.stat(docdb).st_mtime
     assert created < modified
 
 
 def test_document_register(config, controller_init, document_root):
-    controller_init.register(Args(root=document_root))
+    controller_init.register(root=document_root)
     docdb = config.get('sqlite3', 'documents')
     conn = sqlite3.connect(docdb)
     doc_count = conn.execute('SELECT COUNT(*) FROM documents').fetchall()[0]
@@ -132,7 +121,7 @@ def test_document_register(config, controller_init, document_root):
 def test_document_index(config, controller_docs, document_root,
                         tmp_csv_buffer):
     controller_docs.index_store.csv_buffer = tmp_csv_buffer
-    controller_docs.index(Args())
+    controller_docs.index()
     csv_import(tmp_csv_buffer, config.get('sqlite3', 'indexes'))
     idxdb = sqlite3.connect(config.get('sqlite3', 'indexes'))
     result = idxdb.execute('SELECT DISTINCT(word) FROM indexes').fetchall()
@@ -143,7 +132,7 @@ def test_document_index(config, controller_docs, document_root,
 def test_document_show_content(config, controller_docs, capsys):
     conn = sqlite3.connect(config.get('sqlite3', 'documents'))
     document = conn.execute('SELECT * FROM documents LIMIT 1').fetchall()[0]
-    controller_docs.show(Args(document_id=[document[0]], preview=False))
+    controller_docs.show(document_ids=[document[0]], preview=False)
     content, _ = capsys.readouterr()
     assert content[:-1] == document[1]
 
@@ -151,7 +140,7 @@ def test_document_show_content(config, controller_docs, capsys):
 def test_document_show_preview(config, controller_docs, capsys):
     conn = sqlite3.connect(config.get('sqlite3', 'documents'))
     document = conn.execute('SELECT * FROM documents LIMIT 1').fetchall()[0]
-    controller_docs.show(Args(document_id=[document[0]], preview=True))
+    controller_docs.show(document_ids=[document[0]], preview=True)
     preview, _ = capsys.readouterr()
     assert preview in document[1]
 
@@ -160,8 +149,7 @@ def test_query(config, controller_idx, capsys):
     conn = sqlite3.connect(config.get('sqlite3', 'indexes'))
     result = conn.execute('SELECT word FROM indexes LIMIT 1').fetchall()[0]
     word = result[0]
-    args = Args(measure=False, query_string=word, preview=False)
-    controller_idx.query(args)
+    controller_idx.query(word, measure=False, preview=False)
     doc_ids_string, _ = capsys.readouterr()
     doc_ids = doc_ids_string.strip().split()
     assert len(doc_ids) > 0

@@ -28,6 +28,12 @@ class SQLiteController(Controller):
             self.__index_store = SQLiteIndexStore(self.index_connector)
         return self.__index_store
 
+    def index(self, use_spark=False):
+        if use_spark:
+            print('Can\'t use spark with SQLite datastores')
+        else:
+            super().index()
+
 
 class SQLiteDocumentStore:
     def __init__(self, dbpath):

@@ -1,0 +1,3 @@
+plumbum
+nltk
+pymongo [mongo]

@@ -30,14 +30,21 @@ class MongoController(Controller):
             self.__index_store = MongoIndexStore(self.db, dbname)
         return self.__index_store
 
-    def init(self, args):
-        if not args.force:
+    def init(self, force):
+        if not force:
             print('No need to init mongo datastore unless you want to '
                   'clear existing datastores using --force option')
             return
 
         self.document_store.clear()
         self.index_store.clear()
+
+    def index(self, use_spark=False):
+        if use_spark:
+            print('spark indexing is not implemented yet, '
+                  'please use default one')
+        else:
+            super().index()
 
 
 class MongoDocumentStore:

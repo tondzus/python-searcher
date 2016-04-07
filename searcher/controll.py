@@ -33,8 +33,8 @@ def invalid_controller(config):
 
 
 class Controller:
-    def init(self, args):
-        if args.force:
+    def init(self, force=False):
+        if force:
             self.document_store.clear()
             self.document_store.init()
             self.index_store.clear()
@@ -43,10 +43,10 @@ class Controller:
             self.document_store.init()
             self.index_store.init()
 
-    def register(self, args):
+    def register(self, root):
         document_store = self.document_store
         documents_to_store, counter = [], 0
-        for path, _, files in os.walk(args.root):
+        for path, _, files in os.walk(root):
             for file_name in files:
                 relative_path = os.path.join(path, file_name)
                 with open(relative_path) as fp:
@@ -59,9 +59,9 @@ class Controller:
                     document_store.store_documents(documents_to_store)
                     documents_to_store = []
         document_store.store_documents(documents_to_store)
-        print('Done registering {} documents from {}'.format(counter, args.root))
+        print('Done registering {} documents from {}'.format(counter, root))
 
-    def index(self, args):
+    def index(self):
         for count, document_id in enumerate(self.document_store, 1):
             document = self.document_store.load_document(document_id)
             document.indexer.index_document()
@@ -71,21 +71,21 @@ class Controller:
         print('Done indexing {} documents from datastore'.format(count))
         self.index_store.flush()
 
-    def show(self, args):
-        documents = map(self.document_store.load_document, args.document_id)
+    def show(self, document_ids, preview=True):
+        documents = map(self.document_store.load_document, document_ids)
         for doc in documents:
-            if args.preview:
+            if preview:
                 print(doc.preview)
             else:
                 print(doc.content)
 
-    def query(self, args):
+    def query(self, query_string, measure=False, preview=False):
         query_limit = int(self.config.get('default', 'query_limit'))
 
-        if args.measure:
+        if measure:
             start = time.clock()
 
-        query_parts = list(iterate_words(args.query_string))
+        query_parts = list(iterate_words(query_string))
         result_parts = [self.index_store.find_by_word(word, query_limit)
                         for word in query_parts]
         all_results_iterable = chain.from_iterable(result_parts)
@@ -101,11 +101,10 @@ class Controller:
         results_with_ranks = islice(sorted_results, query_limit)
         results = list(map(lambda did: str(did[0]), results_with_ranks))
 
-        if args.preview:
-            args.document_id = results
-            self.show(args)
+        if preview:
+            self.show(results, preview=True)
         else:
             print(' '.join(results))
 
-        if args.measure:
+        if measure:
             print('Took {} to execute'.format(time.clock() - start))
