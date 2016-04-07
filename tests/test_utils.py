@@ -11,16 +11,19 @@ def test_iterate_words_returns_generator():
 def test_iterate_words_text_split():
     text = 'there are many parts'
     generator = utils.iterate_words(text)
-    assert list(generator) == ['there', 'are', 'many', 'parts']
+    target = map(utils.stem_word, ['there', 'are', 'many', 'parts'])
+    assert list(generator) == list(target)
 
 
 def test_iterate_words_handles_dots_commas_dashes():
     text = 'there,are.many-parts'
     generator = utils.iterate_words(text)
-    assert list(generator) == ['there', 'are', 'many', 'parts']
+    target = map(utils.stem_word, ['there', 'are', 'many', 'parts'])
+    assert list(generator) == list(target)
 
 
 def test_iterate_words_generates_lowercase_words():
     text = 'THeRE Are mANY PaRTS'
     generator = utils.iterate_words(text)
-    assert list(generator) == ['there', 'are', 'many', 'parts']
+    target = map(utils.stem_word, ['there', 'are', 'many', 'parts'])
+    assert list(generator) == list(target)

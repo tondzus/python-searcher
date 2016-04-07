@@ -4,6 +4,8 @@ import time
 from operator import itemgetter
 from itertools import chain, islice
 
+from searcher.utils import iterate_words
+
 
 def get_controller(config):
     backend_type = config.get('default', 'datastore')
@@ -83,7 +85,7 @@ class Controller:
         if args.measure:
             start = time.clock()
 
-        query_parts = args.query_string.split()
+        query_parts = list(iterate_words(args.query_string))
         result_parts = [self.index_store.find_by_word(word, query_limit)
                         for word in query_parts]
         all_results_iterable = chain.from_iterable(result_parts)

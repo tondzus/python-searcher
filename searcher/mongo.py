@@ -95,9 +95,9 @@ class MongoIndexStore:
         print('optimizing datastore...', end='\r')
         indexes_raw = self.db[self.dbname].indexes_raw
         pipeline = [
+            {'$sort': {'hit.rank': -1}},
             {'$group': {'_id': '$word', 'hits': {'$push': '$hit'}}},
             {'$project': {'word': '$_id', 'hits': 1}},
-            {'$sort': {'hits.rank': 1}},
             {'$out': 'indexes'}, ]
         indexes_raw.aggregate(pipeline, allowDiskUse=True, useCursor=False)
         indexes_raw.drop()
