@@ -1,5 +1,9 @@
 .cache
 __pycache__
+build
+dist
+*.egg-info
+
 bin/searcher
 tests/plots.list
 tests/to_register

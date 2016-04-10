@@ -84,6 +84,9 @@ class SQLiteDocumentStore:
             os.remove(self.dbpath)
             self.__db = None
 
+    def __len__(self):
+        return self.db.execute('SELECT COUNT(*) FROM documents').fetchone()[0]
+
 
 class SQLiteIndexStore:
     def __init__(self, dbpath):

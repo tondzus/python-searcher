@@ -1,13 +1,6 @@
 #!/usr/bin/env python3
-import configparser
 from plumbum import cli, local
-from searcher.controll import get_controller
-
-
-def load_config(path):
-    config = configparser.ConfigParser()
-    config.read(path)
-    return config
+from searcher.controll import get_controller, load_config
 
 
 @cli.Predicate

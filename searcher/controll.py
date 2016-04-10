@@ -1,10 +1,24 @@
 import os
 import sys
 import time
+import configparser
 from operator import itemgetter
 from itertools import chain, islice
+from pkg_resources import resource_filename
 
-from searcher.utils import iterate_words
+from searcher.utils import iterate_words, document_count, files_iterator
+
+
+def load_config(path=None):
+    config = configparser.ConfigParser()
+    config.read(resource_filename('searcher', 'conf.ini'))
+
+    if os.path.isfile('searcher.ini'):
+        config.read('searcher.ini')
+
+    if path is not None:
+        config.read(path)
+    return config
 
 
 def get_controller(config):
@@ -46,29 +60,29 @@ class Controller:
     def register(self, root):
         document_store = self.document_store
         documents_to_store, counter = [], 0
-        for path, _, files in os.walk(root):
-            for file_name in files:
-                relative_path = os.path.join(path, file_name)
-                with open(relative_path) as fp:
-                    new_doc = document_store.prepare_document_query(fp.read())
-                    documents_to_store.append(new_doc)
-                    counter += 1
-                    print('Registered {} documents'.format(counter), end='\r')
-
-                if len(documents_to_store) == self.document_batch_store_size:
-                    document_store.store_documents(documents_to_store)
-                    documents_to_store = []
+        msg = 'registering documents... {}/{}'
+        document_total_count = document_count(root)
+        for relative_path in files_iterator(root):
+            with open(relative_path, errors='ignore') as fp:
+                new_doc = document_store.prepare_document_query(fp.read())
+                documents_to_store.append(new_doc)
+                counter += 1
+                print(msg.format(counter, document_total_count), end='\r')
+            if len(documents_to_store) == self.document_batch_store_size:
+                document_store.store_documents(documents_to_store)
+                documents_to_store = []
         document_store.store_documents(documents_to_store)
-        print('Done registering {} documents from {}'.format(counter, root))
+        print('registered {} documents from {}'.format(counter, root))
 
     def index(self):
+        msg = 'indexing documents... {}/{}'
+        document_total_count = len(self.document_store)
         for count, document_id in enumerate(self.document_store, 1):
             document = self.document_store.load_document(document_id)
             document.indexer.index_document()
             self.index_store.register_document_indexes(document.indexer)
-            msg = 'Indexed {} documents from datastore'
-            print(msg.format(count), end='\r')
-        print('Done indexing {} documents from datastore'.format(count))
+            print(msg.format(count, document_total_count), end='\r')
+        print('indexed {} documents from datastore'.format(count))
         self.index_store.flush()
 
     def show(self, document_ids, preview=True):

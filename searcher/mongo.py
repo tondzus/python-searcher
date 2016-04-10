@@ -1,4 +1,8 @@
+import os
+from os.path import expanduser, abspath
+import sys
 from bson.objectid import ObjectId
+from plumbum import local
 from pymongo import MongoClient
 
 from searcher.controll import Controller
@@ -41,10 +45,22 @@ class MongoController(Controller):
 
     def index(self, use_spark=False):
         if use_spark:
-            print('spark indexing is not implemented yet, '
-                  'please use default one')
+            os.putenv('PYSPARK_PYTHON', sys.executable)
+            spark_indexer = local.which('spark-indexer.py')
+            spark = self.prepare_spark_cmd()
+            print('indexing documents using spark...', end='\r')
+            spark(str(spark_indexer))
+            print('indexed all documents from datastore')
+            self.index_store.optimize_datastore()
         else:
             super().index()
+
+    def prepare_spark_cmd(self):
+        spark_root = self.config.get('mongo', 'spark', fallback='')
+        cmd = os.path.join(spark_root, 'spark-submit')
+        mongo_jar = self.config.get('mongo', 'spark-mongo')
+        mongo_jar = abspath(expanduser(mongo_jar))
+        return local[cmd]['--jars', mongo_jar]
 
 
 class MongoDocumentStore:
@@ -75,6 +91,9 @@ class MongoDocumentStore:
             print('WARNING: documents database already exists, droping')
             db.documents.drop()
 
+    def __len__(self):
+        return self.db[self.dbname].documents.count()
+
 
 class MongoIndexStore:
     def __init__(self, mongoclient, dbname):
@@ -99,6 +118,9 @@ class MongoIndexStore:
     def flush(self):
         self.store_indexes(self.unsaved_indexes)
         self.unsaved_indexes = []
+        self.optimize_datastore()
+
+    def optimize_datastore(self):
         print('optimizing datastore...', end='\r')
         indexes_raw = self.db[self.dbname].indexes_raw
         pipeline = [
@@ -116,8 +138,11 @@ class MongoIndexStore:
             projection = {'hits': {'$slice': limit}, '_id': 0}
         else:
             projection = {'hits': 1, '_id': 0}
-        res = indexes.find_one({'word': word}, projection=projection)
-        yield from ((str(r['document']), r['rank']) for r in res['hits'])
+        res = indexes.find_one({'_id': word}, projection=projection)
+        if res:
+            yield from ((str(r['document']), r['rank']) for r in res['hits'])
+        else:
+            return []
 
     def clear(self):
         db = self.db[self.dbname]
@@ -125,3 +150,5 @@ class MongoIndexStore:
         if 'indexes' in collections:
             print('WARNING: indexes database already exists, droping')
             db.indexes.drop()
+        if 'indexes_raw' in collections:
+            db.indexes_raw.drop()

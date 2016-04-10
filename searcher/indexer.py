@@ -14,5 +14,5 @@ class DocumentIndexer:
 
     def __iter__(self):
         did = self.document.document_id
-        yield from ((did, w, float(c) / self.total_word_count)
+        yield from ((did, w, c / self.total_word_count)
                     for w, c in self.index.items())
