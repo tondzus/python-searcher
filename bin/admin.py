@@ -23,10 +23,17 @@ class PythonSearcher(cli.Application):
 @PythonSearcher.subcommand('init')
 class PythonSearcherInit(cli.Application):
     """Initialize datastores"""
+    _components = 'all'
+
     force = cli.Flag(['-f', '--force'], help='Remove old database if present')
 
+    @cli.switch(['-c', '--components'], cli.Set('all', 'indexes', 'documents'))
+    def init_components(self, component):
+        """Use to limit components selected to be initialized [default: all]"""
+        self._components = component
+
     def main(self):
-        self.root_app.controller.init(self.force)
+        self.root_app.controller.init(self._component, self.force)
 
 
 @PythonSearcher.subcommand('register')

@@ -47,15 +47,19 @@ def invalid_controller(config):
 
 
 class Controller:
-    def init(self, force=False):
+    def init(self, component, force=False):
         if force:
-            self.document_store.clear()
-            self.document_store.init()
-            self.index_store.clear()
-            self.index_store.init()
+            if component in ['documents', 'all']:
+                self.document_store.clear()
+                self.document_store.init()
+            if component in ['indexes', 'all']:
+                self.index_store.clear()
+                self.index_store.init()
         else:
-            self.document_store.init()
-            self.index_store.init()
+            if component in ['documents', 'all']:
+                self.document_store.init()
+            if component in ['indexes', 'all']:
+                self.index_store.init()
 
     def register(self, root):
         document_store = self.document_store

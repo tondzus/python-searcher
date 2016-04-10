@@ -54,7 +54,7 @@ def controller(config):
 
 @pytest.fixture(scope='function')
 def controller_init(controller):
-    controller.init(force=True)
+    controller.init('all', force=True)
     return controller
 
 
@@ -84,7 +84,7 @@ def tmp_csv_buffer(request):
 
 
 def test_database_init(config, controller):
-    controller.init(force=False)
+    controller.init('all', force=False)
     assert os.path.isfile(config.get('sqlite3', 'documents'))
 
 
@@ -94,7 +94,7 @@ def test_database_init_db_exist(config, controller):
         fp.write('rubish')
     created = os.stat(docdb).st_mtime
 
-    controller.init(force=False)
+    controller.init('all', force=False)
     modified = os.stat(docdb).st_mtime
     assert created == modified
 
@@ -105,7 +105,7 @@ def test_database_force_init(config, controller):
         fp.write('rubish')
     created = os.stat(docdb).st_mtime
 
-    controller.init(force=True)
+    controller.init('all', force=True)
     modified = os.stat(docdb).st_mtime
     assert created < modified
 

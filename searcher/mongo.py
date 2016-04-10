@@ -34,24 +34,20 @@ class MongoController(Controller):
             self.__index_store = MongoIndexStore(self.db, dbname)
         return self.__index_store
 
-    def init(self, force):
+    def init(self, component, force):
         if not force:
             print('No need to init mongo datastore unless you want to '
                   'clear existing datastores using --force option')
             return
 
-        self.document_store.clear()
-        self.index_store.clear()
+        if component in ['documents', 'all']:
+            self.document_store.clear()
+        if component in ['indexes', 'all']:
+            self.index_store.clear()
 
     def index(self, use_spark=False):
         if use_spark:
-            os.putenv('PYSPARK_PYTHON', sys.executable)
-            spark_indexer = local.which('spark-indexer.py')
-            spark = self.prepare_spark_cmd()
-            print('indexing documents using spark...', end='\r')
-            spark(str(spark_indexer))
-            print('indexed all documents from datastore')
-            self.index_store.optimize_datastore()
+            self.index_spark()
         else:
             super().index()
 
@@ -61,6 +57,15 @@ class MongoController(Controller):
         mongo_jar = self.config.get('mongo', 'spark-mongo')
         mongo_jar = abspath(expanduser(mongo_jar))
         return local[cmd]['--jars', mongo_jar]
+
+    def index_spark(self):
+        os.putenv('PYSPARK_PYTHON', sys.executable)
+        spark_indexer = local.which('spark-indexer.py')
+        spark = self.prepare_spark_cmd()
+        print('indexing documents using spark...', end='\r')
+        spark(str(spark_indexer))
+        print('indexed all documents from datastore')
+        self.index_store.optimize_datastore()
 
 
 class MongoDocumentStore:

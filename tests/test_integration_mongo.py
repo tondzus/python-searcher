@@ -50,7 +50,7 @@ def controller(config):
 
 @pytest.fixture(scope='function')
 def controller_init(controller):
-    controller.init(force=True)
+    controller.init('all', force=True)
     return controller
 
 
@@ -67,12 +67,12 @@ def controller_idx(config, controller_docs):
 
 
 def test_database_init(config, controller):
-    controller.init(force=False)
+    controller.init('all', force=False)
 
 
 def test_database_init_db_exist(config, controller, db):
     db.documents.insert({'id': 1, 'content': 'some text'})
-    controller.init(force=False)
+    controller.init('all', force=False)
     documents = list(db.documents.find())
     assert len(documents) == 1
     assert documents[0]['id'] == 1
@@ -83,7 +83,7 @@ def test_database_force_init(config, controller, db):
     document_count = db.documents.find().count()
     assert document_count == 1
 
-    controller.init(force=True)
+    controller.init('all', force=True)
     document_count = db.documents.find().count()
     assert document_count == 0
 
